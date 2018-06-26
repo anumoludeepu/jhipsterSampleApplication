@@ -1,0 +1,362 @@
+
+package com.syntel.travel;
+
+import org.jsondoc.spring.boot.starter.EnableJSONDoc;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+@EnableJSONDoc
+public class TravelServiceApplication {
+	public static void main(String[] args) {
+		SpringApplication.run(TravelServiceApplication.class, args);
+	}
+}
+
+////////////////////////////////////////
+
+package com.syntel.travel.controller;
+
+
+import java.util.List;
+
+import org.jsondoc.core.annotation.Api;
+import org.jsondoc.core.annotation.ApiBodyObject;
+import org.jsondoc.core.annotation.ApiMethod;
+import org.jsondoc.core.annotation.ApiPathParam;
+import org.jsondoc.core.annotation.ApiResponseObject;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Pageable;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.syntel.travel.model.TravelRequest;
+import com.syntel.travel.service.TravelService;
+@RestController
+@Api(description = "The travel controller", name = "Travel Request Services")
+public class TravelServiceController {
+	@Autowired
+	TravelService travelServiceImpl;
+	@ApiMethod
+	@RequestMapping(value = "/getAllTravelData", method = RequestMethod.GET, headers = "Accept=application/json")
+	public  List<TravelRequest> getAllCustomers(Pageable pageable) {
+ 
+		return travelServiceImpl.getAllTravelRequest(pageable);
+	}
+	@ApiMethod
+	@RequestMapping(value = "/updateTravelData", method = RequestMethod.PUT, headers = "Accept=application/json")
+	public @ApiResponseObject TravelRequest updateCustomer(@ApiBodyObject @RequestBody TravelRequest travelRequest) {
+		return travelServiceImpl.updateTravelRequest(travelRequest);
+ 
+	}
+	@ApiMethod
+	@RequestMapping(value = "/addTravelData", method = RequestMethod.POST)
+	TravelRequest addTravelRequest(@ApiBodyObject @RequestBody TravelRequest travelRequest) {
+		return travelServiceImpl.createTravelRequest(travelRequest);
+	}
+	@ApiMethod
+	@RequestMapping(value = "/deleteTravelData/{id}", method = RequestMethod.DELETE, headers = "Accept=application/json")
+	public void deleteCustomer(@PathVariable("id") Long  id) {
+		travelServiceImpl.deleteTravelRequest(id);
+	}
+	@ApiMethod
+	@RequestMapping(value = "/getById/{id}", method = RequestMethod.GET, headers = "Accept=application/json")
+	public TravelRequest findRequest( @ApiPathParam(name = "id") @PathVariable("id") Long  id) {
+		return travelServiceImpl.findByID(id);
+ 
+ 
+	}
+}
+///////////////////////
+
+package com.syntel.travel.dao;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.repository.CrudRepository;
+import org.springframework.data.repository.PagingAndSortingRepository;
+
+import com.syntel.travel.model.TravelRequest;
+
+public interface TravelRepository extends PagingAndSortingRepository<TravelRequest
+, Long> {
+}
+///////////////////////////
+
+
+package com.syntel.travel.model;
+
+import java.io.Serializable;
+import java.sql.Timestamp;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.util.TimeZone;
+
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.Table;
+import javax.persistence.Temporal;
+
+import org.jsondoc.core.annotation.ApiObject;
+import org.jsondoc.core.annotation.ApiObjectField;
+
+import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+
+import lombok.Data;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+@Table(name ="travelrequest",schema="PUBLIC")
+@Entity(name="travelrequest")
+@Data
+@ApiObject
+public class TravelRequest implements Serializable  {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 2049187431612536606L;
+	@Id
+	@GeneratedValue(strategy = GenerationType.AUTO)
+	@Column(name = "ID")
+	private long tavelRequestId;
+	@ApiObjectField(description = "Travel From City" ,required=true)
+	@Column(name = "FROM_CITY")
+	private String fromCity;
+	@ApiObjectField(description = "Travel To City" ,required=true)
+	@Column(name = "TO_CITY")
+	private String toCity;
+	@ApiObjectField(description = "Travel Time" ,required=true,format="yyyy-MM-dd'T'HH:mm:ss")
+	@Column(name = "TRAVEL_TIME")
+	@JsonFormat( pattern = "yyyy-MM-dd'T'HH:mm:ss")
+	private Timestamp travelTime;
+	@ApiObjectField(description = "Traveler Name" ,required=true)
+	@Column(name = "TRAVLER_NAME")
+	private String travlerName;
+	public String getFromCity() {
+		return fromCity;
+	}
+	public long getTavelRequestId() {
+		return tavelRequestId;
+	}
+	public String getToCity() {
+		return toCity;
+	}
+	public Timestamp getTravelTime() {
+		return travelTime;
+	}
+	public String getTravlerName() {
+		return travlerName;
+	}
+	public void setFromCity(String fromCity) {
+		this.fromCity = fromCity;
+	}
+	public void setTavelRequestId(long tavelRequestId) {
+		this.tavelRequestId = tavelRequestId;
+	}
+	public void setToCity(String toCity) {
+		this.toCity = toCity;
+	}
+	public void setTravelTime(Timestamp travelTime) {
+		this.travelTime = travelTime;
+	}
+	public void setTravlerName(String travlerName) {
+		this.travlerName = travlerName;
+	}
+	@Override
+	public String toString() {
+		return "TravelRequest [tavelRequestId=" + tavelRequestId + ", FROM_CITY=" + fromCity + ", TO_CITY=" + toCity
+				+ ", travelTime=" + LocalDateTime.ofInstant(Instant.ofEpochMilli(travelTime.getTime()), TimeZone
+						.getDefault().toZoneId()) + ", travlerName=" + travlerName + "]";
+	}
+}
+/////////////////////////////
+package com.syntel.travel.service;
+
+import java.util.List;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
+import com.syntel.travel.model.TravelRequest;
+
+public interface TravelService {
+
+	TravelRequest createTravelRequest(TravelRequest travelRequest); 
+
+	TravelRequest updateTravelRequest(TravelRequest travelRequest);
+
+	void deleteTravelRequest(Long id);
+
+	public List<TravelRequest> getAllTravelRequest(Pageable pageable);
+	public TravelRequest findByID(long id);
+
+}
+/////////////////////////////
+
+package com.syntel.travel.service;
+
+
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+
+import com.syntel.travel.dao.TravelRepository;
+import com.syntel.travel.model.TravelRequest;
+
+@Service
+public class TravelServiceImpl implements TravelService {
+	@Autowired
+	private TravelRepository travelRepository;
+	
+	public TravelRequest createTravelRequest(TravelRequest travelRequest) {
+		return travelRepository.save(travelRequest);
+	}
+	public  List<TravelRequest> getAllTravelRequest(Pageable pageable) {
+		return travelRepository.findAll(pageable).getContent();
+	}
+	public TravelRequest findByID(long id) {
+		return travelRepository.findOne(id);
+	}
+
+	public TravelRequest updateTravelRequest(TravelRequest travelRequest) {
+		return travelRepository.save(travelRequest);
+	}
+
+	 public void deleteTravelRequest(Long travelRequest) {
+			 travelRepository.delete(travelRequest);
+
+	}
+}
+///////////////////////////
+spring.application.name=travel-service
+#h2 In Memory DB Config
+spring.h2.console.enabled=true
+spring.datasource.url=jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+spring.datasource.driverClassName=org.h2.Driver
+spring.datasource.username=sa
+spring.datasource.password=
+spring.jpa.database-platform=org.hibernate.dialect.H2Dialect
+spring.jpa.hibernate.ddl-auto = update
+spring.jpa.show-sql=true
+spring.jpa.properties.hibernate.format_sql=true
+jsondoc.version=1.0
+jsondoc.basePath=http://syncgdc3558:8080
+jsondoc.packages[0]=com.syntel.travel
+# optional configuration
+jsondoc.playgroundEnabled=true
+jsondoc.displayMethodAs=URI
+spring.jackson.serialization.write-dates-as-timestamps=false
+/////
+INSERT INTO PUBLIC.TRAVELREQUEST("ID","FROM_CITY","TO_CITY","TRAVEL_TIME","TRAVLER_NAME")VALUES(1,'Chennai','Vijayawada',sysdate,'deepu') ;
+
+/////
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<groupId>com.syntel</groupId>
+	<artifactId>TempletPocTravel</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<packaging>jar</packaging>
+
+	<name>TempletPocTravel</name>
+	<description>Demo project for Travel using Spring Boot</description>
+
+	<parent>
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-starter-parent</artifactId>
+		<version>1.5.6.RELEASE</version>
+	</parent>
+
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+		<java.version>1.8</java.version>
+		<spring.cloud.version>Dalston.SR4</spring.cloud.version>
+	</properties>
+
+	<dependencies>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-actuator</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.projectlombok</groupId>
+			<artifactId>lombok</artifactId>
+			<version>1.16.6</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.jsondoc</groupId>
+			<artifactId>spring-boot-starter-jsondoc</artifactId>
+			<version>1.2.19</version>
+		</dependency>
+		<dependency>
+			<groupId>org.jsondoc</groupId>
+			<artifactId>jsondoc-ui-webjar</artifactId>
+			<version>1.2.19</version>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-devtools</artifactId>
+			<scope>runtime</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-data-jpa</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>com.h2database</groupId>
+			<artifactId>h2</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>mysql</groupId>
+			<artifactId>mysql-connector-java</artifactId>
+		</dependency>
+		<!-- JSTL for JSP -->
+		<dependency>
+			<groupId>javax.servlet</groupId>
+			<artifactId>jstl</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-web</artifactId>
+		</dependency>
+	</dependencies>
+
+	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>org.springframework.cloud</groupId>
+				<artifactId>spring-cloud-dependencies</artifactId>
+				<version>${spring.cloud.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
+
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-maven-plugin</artifactId>
+			</plugin>
+		</plugins>
+	</build>
+
+
+</project>
